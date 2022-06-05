@@ -1,0 +1,81 @@
+version: 2
+
+requires-installed-packages: &requires-installed-packages
+  requires:
+    - install-packages
+
+requires-node: &requires-node
+  docker:
+    - image: circleci/node:10.15.3-stretch
+
+jobs:
+  install-packages:
+    <<: *requires-node
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - yarn-packages-{{ .Branch }}-{{ checksum "yarn.lock" }}
+      - run:
+          name: Install packages
+          command: yarn install
+      - save_cache:
+          key: yarn-packages-{{ .Branch }}-{{ checksum "yarn.lock" }}
+          paths:
+            - node_modules
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project
+  # run-linter:
+  #   <<: *requires-node
+  #   steps:
+  #     - attach_workspace:
+  #         at: ~/
+  #     - run:
+  #         name: Run linter
+  #         command: npx vue-cli-service lint
+  run-tests:
+    <<: *requires-node
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Run tests
+          command: echo "This is just sample config, please replace this command with real tests :)"
+  run-build:
+    <<: *requires-node
+    steps:
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Build
+          command: yarn build
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/dist
+  # deploy:
+  #   <<: *requires-node
+  #   steps:
+  #     - attach_workspace:
+  #         at: ~/
+  #     - run:
+  #         name: Deploy to AWS S3
+  #         command: yarn deploy
+workflows:
+  version: 2
+  main:
+    jobs:
+      - install-packages
+      # - run-linter:
+      #     <<: *requires-installed-packages
+      - run-tests:
+          <<: *requires-installed-packages
+      - run-build:
+          <<: *requires-installed-packages
+      # - deploy:
+      #     requires:
+      #       - run-linter
+      #       - run-tests
+      #       - run-build
